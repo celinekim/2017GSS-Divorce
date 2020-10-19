@@ -1,0 +1,99 @@
+---
+output: html_document
+---
+<h3> <center> Appendix </center> </h3>
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Below is the packages and libraries used for this analysis. marriage_data is the
+data extracted from the 2017 General Social Survey required for this study. 
+```{r, message=FALSE, warning=FALSE, echo=TRUE}
+#install.packages("survey")
+#install.packages("ResourceSelection")
+library(tidyverse)
+library(survey)
+library(ggplot2)
+library(dplyr)
+library(ResourceSelection)
+
+marriage_data <- read.csv("./gss_2017.csv")
+```
+
+### Table 1
+
+Below is the summary of the logistic regression model using the Survey Library.
+```{r}
+n = length(marriage_data$end_type_first_marriage)
+
+# This is the 2017 population of Canada of age 15 and over calculated by using 
+# information provided by Statistics Canada in a report called "Population 
+# estimates on July 1st, by age and sex". 
+N = 30633177
+
+fpc.srs = rep(N,n)
+
+marriage.design <- svydesign(id=~1, data=marriage_data, fpc=fpc.srs)
+
+# Logistic regression using the Survey Library
+mylogitsvy <- svyglm(end_type_first_marriage ~ age_at_first_marriage +
+                       age_of_spouse_at_first_marriage +
+                       as.factor(common_law_before_marriage), marriage.design, 
+                     family="binomial")
+summary(mylogitsvy)
+```
+
+### Table 2
+
+Below is the result of the Hosmer-Lemeshow Test to check for the goodness of fit 
+of the model used in this analysis.
+```{r}
+# The Hosmer-Lemeshow Test to check for goodness of fit of the model
+hl <- hoslem.test(mylogitsvy$y, fitted(mylogitsvy), g=10)
+hl
+```
+
+### Table 3
+
+Below is the 95% confidence interval calculated for log odds ratio.
+```{r}
+confint(mylogitsvy)
+```
+
+### Table 4
+
+Below is the 95% confidence interval calculated for the odds ratio.
+```{r}
+exp(confint(mylogitsvy))
+```
+
+### Figure 1
+
+```{r, message=FALSE, warning = FALSE}
+ggplot(marriage_data, aes(x=age_at_first_marriage, y=end_type_first_marriage)) +
+  geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) +
+  ggtitle("Scatterplot of Age of Respondent at Start of First Marriage vs. \n 
+          End Type of First Marriage")
+```
+
+\newpage
+
+### Figure 2
+```{r, message=FALSE, warning = FALSE}
+ggplot(marriage_data, aes(x=age_of_spouse_at_first_marriage, y=end_type_first_marriage)) + 
+  geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) +
+  ggtitle("Scatterplot of Age of Spouse at Start of First Marriage vs. \n 
+          End Type of First Marriage")
+```
+
+\newpage
+
+### Figure 3
+
+```{r}
+plot(mylogitsvy, which=5, main="The Pearson Residuals vs. Leverage Plot", 
+     caption=c())
+```
