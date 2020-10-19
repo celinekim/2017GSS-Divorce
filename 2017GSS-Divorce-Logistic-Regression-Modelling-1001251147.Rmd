@@ -1,0 +1,471 @@
+---
+title: "Logistic Regression Modelling of the Probability of the First Marriage Ending in Divorce"
+author: "Celine Kim (1001251147)"
+date: "19 October 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Abstract
+
+Using approximately 5000 observations on people's first marriage from the 2017
+General Social Survey (GSS) on families, this report analyzes how the age of the
+respondent and spouse at the start of the first marriage and the presence of
+common-law unions influence the first marriage ending in divorce. The
+multivariate logistic regression model used in this analysis revealed the
+following relationship: 
+<center>
+$\log{\frac{p}{1-p}} = 1.6841 + 0.0648x_1 - 0.1136x_2 + 1.7476x_3$, 
+</center>
+where $p$ is the probability of the first marriage ending in
+divorce, $x_1$ is the age of the respondent at the start of marriage, $x_2$ is
+the age of the spouse or partner at the start of marriage, and $x_3$ is a binary
+categorical variable that indicates the presence of a common-law union before
+the first marriage. All p-values of the intercept and three explanatory
+variables less than 0.05, standard errors less than 1, the result of Hosmer and
+Lemeshow goodness of fit (GOF) test, and the Pearson's residual plot show that
+this model is valid. However, since divorce is driven by multiple factors and
+people who are currently in the first marriage have not been considered in this
+report, a future study considering these factors will be needed for a more
+accurate analysis.
+
+## Introduction
+
+The concept of common-law unions was very new to me as a person having lived in
+South Korea for approximately 20 years. According to the Canadian Encyclopedia,
+17.8% of families and 21.3% of all Canadian couples are from common-law unions.
+Coming from a quite conservative cultural background where premarital
+cohabitation is not that common, I was very interested in the different forms of
+families in Canada and the relationship between marriage, common-law
+relationships and divorce.
+The goal of the analysis in this report is to find out how age of oneself and
+partner at the start of one's first marriage and cohabitation experience from
+common-law unions before their marriage influence the probability of divorce.
+This paper will explore how the multivariate logistic regression model can be
+used to analyze this relationship.
+
+## Data
+
+```{r, echo=FALSE, message=FALSE}
+#install.packages("survey")
+#install.packages("ResourceSelection")
+library(tidyverse)
+library(survey)
+library(ggplot2)
+library(dplyr)
+library(ResourceSelection)
+
+marriage_data <- read.csv("./gss_2017.csv")
+```
+
+The data used in this report is from the 2017 General Social Survey (GSS) on
+families in Canada. This data provides information that increases understanding
+of general social trends and characteristics of families that exist in Canada.
+As the prime minister of Canada puts it, one of Canada's strengths is diversity,
+which is evident in languages, cultural and ethnic backgrounds, gender and also
+in families. This data was selected to explore patterns in the increasingly
+diversifying forms and characteristics of families in Canada.
+
+The survey asks questions that cover a wide range of topics. Some topics include
+the respondent's date of birth, family origins, conjugal and parental history,
+respondent's children and spouse or partner, organization within the household,
+education, health, and much more. This report will focus on the section on
+conjugal history of the respondents.
+
+Data was collected from 2 February to 30 November 2017 through telephone
+interviews with voluntary survey participation from the respondents. The
+response rate of this survey was 52.4%.
+
+As stated before, a strength of this questionnaire is the broad spectrum covered
+about families. In particular, variables chosen for analysis in this report were
+all able to be answered in numerical or categorial values that minimizes
+subjectivity. In this questionnaire, an option called "valid skip" exists, which
+checks for validity of the questions. For example, people on their first
+marriage who have never experienced separation or divorce can choose the valid
+skip option for questions regarding second marriage or divorce. Based on the
+number of responses of valid skip for questions asking for the age of separation
+or divorce questions and end type of first marriage, data seems to be reliable
+because both the respondent and spouse categories are roughly 15,000. A drawback
+of this survey is that there are too many questions in the questionnaire, which
+usually influences the response rate and quality of responses. In addition,
+another drawback is that some questions that ask for the respondent's age at the
+time of parent's divorce or age of first marriage only covers from 15 to 49 and
+any response over 50 is just recorded as 50 instead of the actual age.
+
+Since this survey was conducted by collecting data at a specific point in time,
+the 2017 GSS is a cross-sectional study. The target population is all people of
+the age 15 and older in the 10 provinces of Canada. Residents of the Yukon,
+Northwest Territories and Nunavut and full-time residents of institutions have
+been excluded from the target population.
+
+The survey frame was created by combining the list of valid landline and
+cellular telephone numbers obtained by Statistics Canada and the Address
+Register (AR) regardless if the phone number was linked to an address. However,
+for those 86% of the phone numbers that were successfully connected to an
+address on the AR, people with the same address  were grouped together using the
+AR.
+
+The 10 provinces were divided into 27 strata. The sampling technique used for
+this survey is simple random sampling without replacement in each of the strata.
+The respondents answered this survey through computer assisted telephone
+interviews. The sample size for the 2017 GSS was 20,602, which was roughly
+similar to the target sample size of 20,000.
+
+Some trade-offs of this sampling approach is that people without phone numbers
+have all been excluded. A drawback of the previously used random digit dialing
+method was over-coverage; the survey was conducted without actually knowing
+whether the random digits are a valid phone number so coverage can be greater
+than the actual population. However, with this new method, since the list was
+created at a certain point before the actual survey is conducted, service for
+some of the telephone numbers might have been cancelled and new phone numbers
+are not covered in the list which also creates over and under coverage issues.
+
+The survey consists of questions that are required for weighting and those which
+are not. Questions that are used for weighting do not allow a non-response
+option. The calculated weights are then used to adjust for non-response. Also,
+additional information available to Statistics Canada was used to adjust for
+partial non-response. Finally, telephone numbers of non-responding interviewees
+were dropped from the survey. The cost of this procedure is that since
+non-responding numbers have been dropped, even if the weights are adjusted, the
+sampling procedure does not strictly follow the simple random sampling method
+considering that the response rate is around 50%.
+
+## Model
+
+The statistical model used in this analysis is the logistic regression model.
+The software used to run the model is R. Given that the first marriage has
+ended, we are modeling to see whether the first marriage will end because of
+divorce or any other reasons. The aspects focused in this model are the age of
+the respondent at the start of the first marriage, the age of the spouse at the
+start of the first marriage, and whether the respondent and partner have engaged
+in a common-law union before their marriage. Since end type of marriage is a
+binary response variable where divorce is 1 and other reasons is 0, it was
+thought that a logistic regression model was appropriate.
+
+Let $x_1$ be the age of the respondent at the start of marriage. 
+
+Let $x_2$ be the age of the spouse or partner at the start of marriage.
+
+Let $x_3$ be a binary categorical variable where 1 represents that the
+respondent was involved in a common-law union with the partner before the first
+marriage and 0 represents otherwise.
+
+The event of interest in this model is whether the first marriage will end
+because of divorce.
+
+Then let $p$ be the probability of the first marriage ending in divorce. 
+
+Then this model in mathematical notation can be written as 
+$\log{\frac{p}{1-p}} = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_3$.
+
+$\beta_0$ is the intercept which represents when $x_1$, $x_2$ and $x_3$ are 0.
+However, in this specific model, it is not meaningful to interpret the intercept
+because it is not possible for the respondent and partner to get marriage at age
+0. $\beta_1$, $\beta_2$ and $\beta_3$ are coefficients that represent the
+change in log odds for every one unit increase in $x_1$, $x_2$ and $x_3$
+respectively.
+
+In this model, $\log{\frac{p}{1-p}}$ is the log odds of the first marriage
+ending in divorce. For example, if the probability of the first marriage ending
+in divorce is 0.2, the odds will be $\frac{0.2}{1-0.2} = \frac{1}{4}$ which is a
+4 to 1 odds against the first marriage ending in divorce.
+
+The first and second aspect, the age of the respondent and partner at the start
+of the first marriage, are important factors to consider when studying about
+divorce because marriage at an early age is socially perceived as a red flag for
+divorce. The Goldilocks Theory of Marriage states that the best age to get
+married is between age 28 and 32. In addition, a sociologist at the University
+of Utah named Nicholas Wolfinger, has found in a recent study that "divorce risk
+declines for people who wait until their late 20s and early 30s to get married.
+But it rises again for those who delay walking down the aisle until their late
+30s". This shows that age at the start of one's marriage is an important aspect
+that influences the risk of divorce.
+
+According to the previously mentioned study, before the age of 32, the
+probability of the marriage ending in divorce decreases by 11% each year. Since
+a one year increase in age greatly influences the probability of divorce, the
+numerical value of age was used in this model rather than categorical variables
+such as age groups. In addition, since age was given in the data as numerical
+values, such modelling decisions were possible.
+
+The third aspect, which is common-law experience before marriage, is also an
+important aspect in studying the risk of divorce. There is a common belief that
+living together before marriage decreases the risk for divorce. However,
+numerous studies including research conducted by Alan Booth and David Johnson
+have concluded that premarital cohabitation actually leads to higher risk of
+instability in marital life and divorce.
+
+Since the study of interest deals with prescence of premarital cohabitation with
+the partner instead of years of experience or age at the start of common-law
+unions, a categorical variable was used in this model. For the following reason,
+even though the age at the start of common-law relationships were given as
+numerical data in the 2017 GSS data, such modelling decisions were found to be
+appropriate.
+
+According to the summary of this logistic regression model in Table 1 of the 
+Appendix, R was able to estimate the odds ratio to find the best fit of this 
+model. If the model does not converge, R fails to do so, which shows that
+this model has converged. Also, the standard errors of the intercept and three
+explanatory variables are less than 1, which indicates that there is no
+overfitting problems (according to the Overfitting and Non-convergence lecture
+from Imperial College London on coursera).
+
+To check for the goodness of fit, the Hosmer-Lemeshow Test was used. A p-value
+less than 0.05 indicates that the model is not a good fit. However, according to
+the results of this model check in Table 2 of the Appendix, the p-value of 
+0.3194 is greater than 0.05, which shows that this logistic regression model is 
+a good fit.
+
+```{r, echo=FALSE}
+n = length(marriage_data$end_type_first_marriage)
+
+# This is the 2017 population of Canada of age 15 and over calculated by using 
+# information provided by Statistics Canada in a report called "Population 
+# estimates on July 1st, by age and sex". 
+N = 30633177
+
+fpc.srs = rep(N,n)
+
+marriage.design <- svydesign(id=~1, data=marriage_data, fpc=fpc.srs)
+
+# Logistic regression using the Survey Library
+mylogitsvy <- svyglm(end_type_first_marriage ~ age_at_first_marriage +
+                       age_of_spouse_at_first_marriage +
+                       as.factor(common_law_before_marriage), marriage.design, 
+                     family="binomial")
+
+# The Hosmer-Lemeshow Test to check for goodness of fit of the model
+hl <- hoslem.test(mylogitsvy$y, fitted(mylogitsvy), g=10)
+```
+
+According to Figure 3 which shows the Pearson Residuals vs. Leverage plot 
+in the result section (also found in the Appendix), since most points fall 
+within the $\pm 3$ bandwidth without a specific pattern, we can say that the 
+fitted logistic regression model is true.
+
+A special case to be considered about this model is that since age of 50 and
+above is recorded as 50 and age below 15 is outside the target population, this
+model should not be used to extrapolate outside the data range of the
+explanatory variables ($x_1, x_2 > 50$ or $x_1, x_2 < 15$).
+
+An alternative model that can be used is a linear regression model if the
+response variable is changed to the age of divorce of the first marriage. Also,
+some variants that can be discussed are the presence of parent's divorce and the
+age and existence of children from the first marriage.
+
+## Results
+
+Figure 1 is the scatterplot with the simple logistic regression line for the
+explanatory variable, age of the respondent at the start of the first marriage,
+and the response variable which is the end type of first marriage. Figure 2 is
+the scatterplot with the same response variable but the explanatory variable is
+age of the spouse at the start of the first marriage. These two plots show
+opposite correlations according to the regression lines shown in the plots
+below. Therefore, we will instead see how all three explanatory variables also
+including the categorical variable affect the response variable by performing a
+logistic regression analysis using the Survey Library.
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+ggplot(marriage_data, aes(x=age_at_first_marriage, y=end_type_first_marriage)) +
+  geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) +
+  ggtitle("Scatterplot of Age of Respondent at Start of First Marriage vs. \n 
+          End Type of First Marriage")
+```
+
+##### Figure 1: Scatterplot of Age of Respondent at Start of First Marriage vs. End Type of First Marriage
+
+<br />
+<br />
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+ggplot(marriage_data, aes(x=age_of_spouse_at_first_marriage, y=end_type_first_marriage)) + 
+  geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) +
+  ggtitle("Scatterplot of Age of Spouse at Start of First Marriage vs. \n 
+          End Type of First Marriage")
+```
+
+##### Figure 2: Scatterplot of Age of Spouse at Start of First Marriage vs. End Type of First Marriage
+
+<br />
+
+The summary of the logistic regression model using the Survey Library can be 
+found in section Table 1 of the Appendix. The equation of the logistic 
+regression model is 
+
+$\log{\frac{p}{1-p}} = 1.6841 + 0.0648*$age_at_first_marriage 
+$- 0.1136*$age_of_spouse_at_first_marriage
+$+ 1.7476*$common_law_before_marriage, 
+
+Now, I will show the equation where p is isolated. In this equation, the 
+variable age_at_first_marriage was denoted as $x_1$, 
+age_of_spouse_at_first_marriage is denoted as $x_2$ and 
+common_law_before_marriage is denoted as $x_3$:
+
+$p = \frac{e^{1.6841} \cdot e^{0.0648x_1} \cdot e^{1.7476x_3}}{(e^{0.1136x_2}+e^{1.6841} \cdot e^{0.0648x_1} \cdot e^{1.7476x_3})}$
+
+<br />
+
+Below is the Pearson Residuals vs. Leverage Plot used to check the model 
+diagnostics.
+
+```{r, echo=FALSE}
+plot(mylogitsvy, which=5, main="The Pearson Residuals vs. Leverage Plot", 
+     caption=c())
+```
+
+##### Figure 3: The Pearson Residuals vs. Leverage Plot
+
+## Discussion
+
+Out of the 20602 observations from the 2017 GSS data, a clean up procedure of
+selecting the appropriate columns, changing unnecessary rows of data to "NA" and
+extracting information needed for this analysis was first done. Then after
+removing the "NA" data, 15650 rows were excluded. Therefore, 4952 observations
+were used for this model, which is approximately 25% of the available data.
+
+The equation of the model is 
+$\log{\frac{p}{1-p}} = 1.6841 + 0.0648*$age_at_first_marriage 
+$- 0.1136*$age_of_spouse_at_first_marriage
+$+ 1.7476*$common_law_before_marriage. 
+
+The intercept of 1.6841 represents when the explanatory variables
+(age_at_first_marriage, age_of_spouse_at_first_marriage and
+common_law_before_marriage) are 0. However, for this model, it is not meaningful
+to interpret the intercept value because it is not possible for the respondent
+and partner to get marriage at the age of 0. The coefficient value of 0.0648 of
+age_at_first_marriage can be interpreted as the following: for every one year
+increase in age, the log odds of the first marriage ending in divorce increases
+by 0.0648. Secondly, the coefficient value of -0.1136 of
+age_of_spouse_at_first_marriage can be interpreted as the following: for every
+one year increase in age, the log odds of the first marriage ending in divorce
+decreases by 0.1136. Finally, the categorical dummy variable
+common_law_before_marriage is binary so it can either be 0 or 1. Thus, the
+coefficient value of 1.7476 of common_law_before_marriage can be interpreted as
+the following: the presence of a common law union between the respondent and
+spouse before the first marriage increases the log odds of the first marriage
+ending in divorce by 1.7476.
+
+This shows that an increase in the age of the respondent at the start of the
+first marriage has a positive correlation with the probability of the first
+marriage ending in divorce while the age of the spouse or partner at the start
+of the first marriage has a negative correlation with the probability of first
+marriage ending in divorce. Among the explanatory variables considered in the
+study, the existence of a common-law union between the respondent and spouse has
+the greatest influence on the probability of divorce.
+
+According to the summary of this logistic regression model in Table 1 of the
+Appendix, p-values of the intercept and all three explanatory variables are less
+than 0.05. This provides grounds to reject the null hypotheses that $\beta_0$,
+$\beta_1$, $\beta_2$ and $\beta_3$ = 0.
+
+While Table 3 of the Appendix shows the 95% confidence intervals of the log odds
+ratio, Table 4 of the Appendix shows the 95% confidence intervals of the odds
+ratio. In this part of the Discussion section, I will deal with the confidence
+intervals of the odds ratio.
+
+The 95% confidence interval of $\beta_0$, the intercept, is (3.8791845,
+7.4827539).
+
+The 95% confidence interval of age_at_first_marriage is (1.0486892, 1.0855979),
+which means that we are 95% confident that a 1 year increase in the age of the
+respondent at the start of the first marriage will result in an average increase
+in probability of the first marriage ending in divorce as low as 1.0486892 or as
+high as 1.0855979.
+
+The 95% confidence interval of age_of_spouse_at_first_marriage is (0.8785619,
+0.9068998), which means that we are 95% confident that a 1 year increase in the
+age of the spouse at the start of the first marriage will result in an average
+increase in probability of the first marriage ending in divorce as low as
+0.8785619 or as high as 0.9068998.
+
+The 95% confidence interval of the binary variable common_law_before marriage is
+(4.7609321, 6.9216959), which means that we are 95% confident that the change
+from 0 to 1 which indicates the presence of a common-law union between the
+respondent and spouse before the first marriage in the age of the spouse at the
+start of the first marriage will result in an average increase in probability of
+the first marriage ending in divorce as low as 4.7609321 or as high as
+6.9216959.
+
+As discussed before in the Model Section, model convergence was shown by the
+fact that R was able to estimate the odds ratio to find the best fit and
+standard error values of less than 1. The p-value of 0.3194 in the result of the
+Hosmer-Lemeshow Test which is greater than 0.05 showed that this logistic
+regression model is a good fit. In addition, the Pearson Residuals vs. Leverage
+plot showed that most points fall within the $\pm3$ bandwidth without a specific
+pattern so it can be concluded that the fitted logistic regression model is
+true.
+
+One strange point is that the respondent's age shows a positive relationship
+with the first marriage ending in divorce while the spouse's age moves in the
+opposite direction. However, common-law unions are actually associated with
+increased divorce rates as mentioned in the study done by Alan Booth and David
+Johnson and its coefficient value of 1.747552 is greatest among all the
+explanatory variables.
+
+One caveat mentioned before about this logistic regression model is caution
+about making inferences outside the data range. Since the questionnaire only
+deals with respondents of age of 15 and older and records age of 50 and over as
+50 instead of the actual age, we must not extrapolate outside the valid range of
+15 to 50. Since there are numerous factors that are involved in divorce, this
+model has some limitations in that it can show the general trend associated with
+divorce, but might not be enough to explain divorce trends of the entire
+Canadian population. Also, since this is just a probability model, it may not be
+able to explain one specific case of divorce. Since this model considers the age
+at the start of the first marriage without considering the current age of the
+respondents or their spouses, it might not reflect the dramatic social changes
+on the trend of marital status among the Canadian population during last several
+decades. Actual numbers show that the general trend of marital status has
+changed greatly in Canada. According to the Canadian Encyclopedia cited before,
+while 92% of the families in Canada were married couples in 1961, there was a
+decrease of 65.8% by the year 2016 and a drastic increase of common-law
+relationships.
+
+The next steps that I want to take in order to further develop this analysis is
+to broaden the scope of subjects involved in the study. People who are currently
+in their first marriage did not answer all four questions (age at the beginning
+of first marriage, age of partner at the beginning of first marriage, common-law
+experience before first marriage and end type of first marriage) in the
+questionnaire. Instead, they only answered questions regarding their current
+marriage. Therefore, in a future study, I would also like to involve those who
+are currently in their first marriage.
+
+In this future study, I would like to use the Bayesian statistical analysis
+method. By combining prior information on the national average divorce rates
+provided by Statistics Canada, I would like to make further statistical
+inferences about the parameters of interest using analysis on the posterior
+distribution. I would also like to conduct another survey that specifically
+focuses on the factors that contribute to divorce to explore what explanatory
+variables must be crucially involved to accurately model this relationship.
+
+
+## References
+
+Booth, A., & Johnson, D. (1988). Premarital Cohabitation and Marital Success.
+Journal of Family Issues, 9(2), 255-272. doi:10.1177/019251388009002007
+
+Bottle, A. (2019). Overfitting and Non-convergence - Assessing Model Fit.
+Retrieved October 13, 2020, from
+https://www.coursera.org/lecture/logistic-regression-r-public-health/overfitting-and-non-convergence-SUf7T
+
+Common-Law Unions in Canada. (n.d.). Retrieved October 12, 2020, from
+https://www.thecanadianencyclopedia.ca/en/article/common-law-unions-in-canada
+
+Government of Canada, Statistics Canada. (2020, September 29). Population
+estimates on July 1st, by age and sex. Retrieved October 15, 2020, from
+https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000501
+
+Statistics Canada. (2017). General social survey (GSS) on Family, 2017: Cycle 
+31. [Public use microdata file and codebook]. Ottawa, ON: Statistics Canada. 
+Retrieved from http://datacentre.chass.utoronto.ca/
+
+The Pennsylvania State University. (2018). Model Diagnostics. Lecture. Retrieved
+October 14, 2020, from https://online.stat.psu.edu/stat504/node/161/
+
+Weissmann, J. (2015, July 16). Bad News: Waiting Too Long to Get Married May
+Increase Your Risk of Divorce. Retrieved October 11, 2020, from
+https://slate.com/business/2015/07/getting-married-late-increases-your-chance-of-a-divorce.html
